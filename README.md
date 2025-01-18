@@ -1,111 +1,134 @@
-# Fullstack Assessment Project Documentation
+# Fullstack Technical Challenge - Project Initialization
 
-This project is a fullstack web application designed for employee management. It uses React for the frontend, Express for the backend, Sequelize as the ORM, and PostgreSQL as the database.
+This project is part of a technical challenge that demonstrates a robust architecture for a fullstack employee management application. The instructions below will guide you through the steps to initialize the project.
 
----
+## Requirements
 
-## **Project Structure**
+To run the project on a local machine, ensure you have the following installed:
 
-```
-fullstack-assessment/
-├── apps/
-│   ├── backend/        # REST API (Node.js + Express + Sequelize)
-│   └── frontend/       # Frontend (React + Vite)
-├── packages/
-│   └── shared/         # Shared code (if applicable)
-├── docker/             # Docker configurations (optional)
-├── pnpm-workspace.yaml # Workspaces configuration for pnpm
-├── docker-compose.yml  # Container orchestration
-├── README.md           # Project documentation
-└── package.json        # Global monorepo configuration
-```
+- **Node.js**: Version >= 20
+- **PNPM**: Version >= 6
+- **Docker**: Docker Desktop or Docker Engine
 
----
+## Configuration
 
-## **Technologies Used**
+### Docker
 
-1. **Frontend**: React + Vite
-2. **Backend**: Express.js + Sequelize
-3. **Database**: PostgreSQL
-4. **ORM**: Sequelize
-5. **Package Management**: PNPM Workspaces
-6. **Containers**: Docker and Docker Compose
+- You can add a `.env` file in the `docker` folder to change the default configuration.
 
----
+## Getting Started
 
-## **Today's Configuration Steps**
+### Local Development
 
-### 1. **Monorepo with PNPM**:
-
-- Initialized the project using `pnpm` and configured workspaces.
-- Created the `apps/backend` and `apps/frontend` directories.
-
-### 2. **Backend**:
-
-- Set up Express and Sequelize.
-- Configured Sequelize migrations for the following tables:
-  - `employees`
-  - `departments`
-  - `departments_history`
-
-### 3. **Frontend**:
-
-- Initialized the frontend using Vite and React.
-- (Optional) Added TailwindCSS for styling.
-
-### 4. **Docker**:
-
-- Created `Dockerfile` for backend and frontend.
-- Installed `pnpm` within the Docker containers.
-- Configured `docker-compose.yml` to orchestrate the following services:
-  - Backend
-  - Frontend
-  - PostgreSQL
-
-### 5. **Database**:
-
-- Configured PostgreSQL using Docker.
-- Set up user, password, and database via `docker-compose.yml`.
-
-### 6. **Verification**:
-
-- Ensured backend, frontend, and database services are running correctly using Docker.
-
----
-
-## **How to Run the Project**
-
-1. Clone the repository:
+1. Initialize the monorepo:
 
    ```bash
-   git clone <repository-url>
-   cd fullstack-assessment
+   pnpm monorepo:init
    ```
 
-2. Build and start the containers:
+2. Update environment files as needed.
+
+3. Install dependencies:
 
    ```bash
-   docker compose build
-   docker compose up
+   pnpm install
    ```
 
-3. Access the services:
+4. Start the development server:
 
-   - **Frontend**: [http://localhost:3000](http://localhost:3000)
-   - **Backend**: [http://localhost:5000](http://localhost:5000)
+   ```bash
+   pnpm dev
+   ```
 
-4. Verify the database:
-   - Use a PostgreSQL client like `DBeaver` or `PgAdmin`.
-   - Default credentials:
-     - **User**: `user`
-     - **Password**: `password`
-     - **Database**: `fullstack_db`
+5. Build the project:
 
----
+   ```bash
+   pnpm build
+   ```
 
-## **Next Steps**
+6. Start the production server:
+   ```bash
+   pnpm start
+   ```
 
-- Resolve internal issues related to library dependencies.
-- Implement controllers and routes in the backend.
-- Connect the frontend with the backend.
-- Add further documentation as needed.
+### Docker Local Development
+
+1. Build the development server:
+
+   ```bash
+   docker compose -f ./docker/compose/docker-compose.dev.yaml build
+   ```
+
+2. Start the development server:
+
+   ```bash
+   docker compose -f ./docker/compose/docker-compose.dev.yaml up
+   ```
+
+   - **Frontend**: [http://localhost:8080](http://localhost:8080)
+   - **Backend**: [http://localhost:4000](http://localhost:4000)
+
+   **Note for Windows users**: Use the `dev:windows` command in the Dockerfile if required.
+
+### Notes on Linter
+
+- The project is set up to run the linter in watch mode during development to enforce best practices. You can disable this by:
+  - Removing the `eslint` plugin from `@app/client/vite.config.ts`.
+  - Removing `eslint src --ext .js,.jsx,.ts,.tsx --fix &&` from `@app/server/nodemon.json`.
+
+### MySQL Configuration
+
+- On the first build of the container, MySQL will set up the initial users and database. Ensure the `.env` file has correct credentials:
+  ```dotenv
+  MYSQL_ROOT_PASSWORD=rootpassword
+  MYSQL_DATABASE_NAME=fullstack_db
+  MYSQL_USER=user
+  MYSQL_PASSWORD=password
+  ```
+- If the `.env` file is misconfigured, stop and rebuild the containers:
+  ```bash
+  docker compose -f ./docker/compose/docker-compose.dev.yaml down --rmi=all --volumes
+  ```
+
+### Known Issues
+
+- **Frontend Error**: If the client app encounters issues:
+
+  - Remove the mounted `node_modules` from `docker-compose.dev.yaml`.
+  - Rebuild the project, add `node_modules` back, and rebuild again.
+
+- **Backend Error**: If the server app shows `Address already in use`:
+  - Restart the containers.
+
+### Docker Production Build
+
+1. Build the production server:
+
+   ```bash
+   docker compose -f ./docker/compose/docker-compose.prod.yaml build
+   ```
+
+2. Start the production server:
+   ```bash
+   docker compose -f ./docker/compose/docker-compose.prod.yaml up
+   ```
+
+## Project Architecture
+
+The project is structured as a monorepo using PNPM Workspaces, with separate folders for the backend and frontend applications.
+
+### Directory Structure
+
+```plaintext
+.
+├── @app
+│   ├── client/         # Frontend (React + Vite + TailwindCSS)
+│   ├── server/         # Backend (Express + TypeScript + Sequelize)
+├── docker/             # Docker configurations
+├── pnpm-workspace.yaml # PNPM workspace configuration
+└── README.md           # Project documentation
+```
+
+## License
+
+This project is shared under the **CC BY-NC 4.0** license. Usage is permitted for non-commercial purposes with proper attribution.

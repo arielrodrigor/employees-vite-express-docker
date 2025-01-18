@@ -1,0 +1,16 @@
+FROM node:20.14-bullseye-slim
+
+ARG APP_WORKIR=/var/www
+
+WORKDIR $APP_WORKIR
+
+COPY ./package.json ./pnpm-lock.yaml ./pnpm-workspace.yaml ./tsconfig.json ./.eslintrc.cjs ./
+COPY @app/client ./@app/client
+COPY packages/tailwind-config ./packages/tailwind-config
+# COPY ./packages/ui-lib ./packages/ui-lib
+
+RUN npm install -g pnpm
+RUN --mount=type=cache,id=pnpm,target=$APP_WORKIR/pnpm/store pnpm install --frozen-lockfile
+
+EXPOSE 8080
+ENTRYPOINT [ "pnpm", "client", "dev", "--host", "0.0.0.0" ]
