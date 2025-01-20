@@ -1,3 +1,3 @@
-import mysql from './connect';
+import { connect } from './connect';
 
-export default mysql;
+export default connect;
