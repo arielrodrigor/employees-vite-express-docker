@@ -1,15 +1,27 @@
 import { Employee } from '../models/employee.model';
 import { con } from '../providers/mysql/connect';
 
+const generateEmployeeId = (firstName: string, lastName: string): string => {
+  const randomNumber = Math.floor(1000 + Math.random() * 9000);
+  return `${firstName.toLowerCase()}.${lastName.toLowerCase()}${randomNumber}`;
+};
+
 const createEmployee = async (
   employee: Partial<Employee>
 ): Promise<Employee> => {
   try {
+    console.log('SEXO');
+    console.log(employee.firstName);
+    console.log(employee.lastName);
+    const employeeId =
+      employee.employeeId ??
+      generateEmployeeId(employee.firstName!, employee.lastName!);
+
     const [result] = await con.query(
       `INSERT INTO employees (employee_id, first_name, last_name, contact_info, hire_date, active, current_department_id)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        employee.employeeId,
+        employeeId,
         employee.firstName,
         employee.lastName,
         employee.contactInfo,
@@ -18,7 +30,12 @@ const createEmployee = async (
         employee.currentDepartmentId
       ]
     );
-    return { id: (result as any).insertId, ...employee } as Employee;
+
+    return {
+      id: (result as any).insertId,
+      employeeId,
+      ...employee
+    } as Employee;
   } catch (error) {
     console.error('Error creating employee:', error);
     throw new Error('Could not create employee');

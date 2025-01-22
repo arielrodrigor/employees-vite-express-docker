@@ -47,6 +47,7 @@ const con: Pool = mysql.createPool({
   host: 'mysql',
   user: rootUser,
   password: rootPassword,
+  database: 'company_db',
   multipleStatements: true,
   waitForConnections: true,
   connectionLimit: 10,
