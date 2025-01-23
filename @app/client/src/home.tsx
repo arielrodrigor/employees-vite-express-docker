@@ -1,3 +1,4 @@
+/* eslint-disable react/require-default-props */
 /* eslint-disable react/button-has-type */
 import './app.css';
 
@@ -24,17 +25,39 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  message?: { type: 'success' | 'error'; text: string };
+  onCloseMessage?: () => void;
 }
 
-function Modal({ isOpen, onClose, children }: ModalProps) {
+function Modal({
+  isOpen,
+  onClose,
+  children,
+  message,
+  onCloseMessage
+}: ModalProps) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="relative w-full max-w-md rounded bg-white p-6 shadow">
+        {message && (
+          <div
+            className={`mx-auto mb-4 flex w-11/12 items-center justify-center rounded px-3 py-2 text-xs font-medium ${
+              message.type === 'success'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-red-100 text-red-800'
+            }`}
+          >
+            <span>{message.text}</span>
+          </div>
+        )}
         <button
           className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
-          onClick={onClose}
+          onClick={() => {
+            onClose();
+            if (onCloseMessage) onCloseMessage();
+          }}
         >
           ✖
         </button>
@@ -58,6 +81,10 @@ function Home() {
     hireDate: ''
   });
   const [newDepartment, setNewDepartment] = useState({ name: '' });
+  const [modalMessage, setModalMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -80,6 +107,10 @@ function Home() {
       const employee = employees.find((e) => e.id === id);
       if (!employee) return;
       const updatedStatus = !employee.active;
+      const terminationDate = !updatedStatus
+        ? new Date().toISOString()
+        : undefined;
+
       await fetch(`/api/employees/${id}`, {
         method: 'DELETE',
         headers: {
@@ -89,11 +120,25 @@ function Home() {
       });
       setEmployees((prev) =>
         prev.map((emp) =>
-          emp.id === id ? { ...emp, active: updatedStatus } : emp
+          emp.id === id
+            ? {
+                ...emp,
+                active: updatedStatus,
+                terminationDate: !updatedStatus ? terminationDate : undefined
+              }
+            : emp
         )
       );
+      setModalMessage({
+        type: 'success',
+        text: `Employee ${updatedStatus ? 'activated' : 'deactivated'} successfully.`
+      });
     } catch (error) {
       console.error('Error toggling employee status:', error);
+      setModalMessage({
+        type: 'error',
+        text: 'Failed to update employee status.'
+      });
     }
   };
 
@@ -103,6 +148,17 @@ function Home() {
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (
+      !newEmployee.firstName ||
+      !newEmployee.lastName ||
+      !newEmployee.departmentId
+    ) {
+      setModalMessage({
+        type: 'error',
+        text: 'Please fill out all required fields.'
+      });
+      return;
+    }
     try {
       const response = await fetch('/api/employees', {
         method: 'POST',
@@ -124,14 +180,28 @@ function Home() {
         const addedEmployee = await response.json();
         setEmployees((prev) => [...prev, addedEmployee]);
         setIsEmployeeModalOpen(false);
+        setModalMessage({
+          type: 'success',
+          text: 'Employee added successfully.'
+        });
+      } else {
+        throw new Error('Failed to add employee');
       }
     } catch (error) {
       console.error('Error adding employee:', error);
+      setModalMessage({ type: 'error', text: 'Failed to add employee.' });
     }
   };
 
   const handleAddDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newDepartment.name) {
+      setModalMessage({
+        type: 'error',
+        text: 'Department name cannot be empty.'
+      });
+      return;
+    }
     try {
       const response = await fetch('/api/departments', {
         method: 'POST',
@@ -142,9 +212,16 @@ function Home() {
       });
       if (response.ok) {
         setIsDepartmentModalOpen(false);
+        setModalMessage({
+          type: 'success',
+          text: 'Department added successfully.'
+        });
+      } else {
+        throw new Error('Failed to add department');
       }
     } catch (error) {
       console.error('Error adding department:', error);
+      setModalMessage({ type: 'error', text: 'Failed to add department.' });
     }
   };
 
@@ -182,12 +259,18 @@ function Home() {
               key={employee.id}
               className="relative flex flex-col gap-4 rounded-lg bg-white p-6 shadow transition-shadow duration-300 hover:shadow-xl"
             >
-              <div className="flex justify-center">
+              <div className="flex items-center justify-between">
                 <img
                   src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${employee.firstName.replaceAll(' ', '')}`}
                   alt="Avatar"
                   className="h-20 w-20 rounded-full border border-gray-300"
                 />
+                {employee.terminationDate && (
+                  <span className="absolute right-2 top-2 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-600">
+                    Terminated:{' '}
+                    {new Date(employee.terminationDate).toLocaleDateString()}
+                  </span>
+                )}
               </div>
               <div className="text-center">
                 <p className="text-lg font-semibold">
@@ -205,16 +288,6 @@ function Home() {
                 <p className="text-sm text-gray-600">
                   Phone: {employee.contactInfo.phone ?? 'N/A'}
                 </p>
-                {employee.terminationDate && (
-                  <div className="mt-4 flex items-center gap-2">
-                    <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-600">
-                      Termination Date:
-                    </span>
-                    <span className="text-sm font-semibold text-gray-700">
-                      {new Date(employee.terminationDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
               </div>
               <div className="mt-4 flex justify-around">
                 <button
@@ -226,7 +299,11 @@ function Home() {
                 </button>
                 <button
                   type="button"
-                  className="w-24 rounded bg-[#bf6363] py-2 text-sm text-white hover:bg-red-700"
+                  className={`w-24 rounded py-2 text-sm text-white ${
+                    employee.active
+                      ? 'bg-[#bf6363] hover:bg-red-700'
+                      : 'bg-[#62bf63] hover:bg-[#4fa14e]'
+                  }`}
                   onClick={() => handleStatusToggle(employee.id)}
                 >
                   {employee.active ? 'Deactivate' : 'Activate'}
@@ -240,6 +317,8 @@ function Home() {
       <Modal
         isOpen={isEmployeeModalOpen}
         onClose={() => setIsEmployeeModalOpen(false)}
+        message={modalMessage}
+        onCloseMessage={() => setModalMessage(null)}
       >
         <h2 className="mb-4 text-lg font-bold">New Employee</h2>
         <form onSubmit={handleAddEmployee}>
@@ -279,15 +358,20 @@ function Home() {
               setNewEmployee({ ...newEmployee, phone: e.target.value })
             }
           />
-          <input
-            type="text"
-            placeholder="Department ID"
+          <select
             className="mb-4 w-full rounded border p-2"
             value={newEmployee.departmentId}
             onChange={(e) =>
               setNewEmployee({ ...newEmployee, departmentId: e.target.value })
             }
-          />
+          >
+            <option value="">Select Department</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {emp.departmentName}
+              </option>
+            ))}
+          </select>
           <input
             type="date"
             className="mb-4 w-full rounded border p-2"
@@ -308,6 +392,8 @@ function Home() {
       <Modal
         isOpen={isDepartmentModalOpen}
         onClose={() => setIsDepartmentModalOpen(false)}
+        message={modalMessage}
+        onCloseMessage={() => setModalMessage(null)}
       >
         <h2 className="mb-4 text-lg font-bold">New Department</h2>
         <form onSubmit={handleAddDepartment}>

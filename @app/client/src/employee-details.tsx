@@ -97,14 +97,21 @@ function EmployeeDetails() {
     try {
       if (!employee) return;
       const updatedStatus = !employee.active;
+      const terminationDate = updatedStatus
+        ? undefined
+        : new Date().toISOString();
+
       await fetch(`/api/employees/${id}`, {
-        method: 'DELETE',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ active: updatedStatus })
+        body: JSON.stringify({ active: updatedStatus, terminationDate })
       });
-      setEmployee((prev) => (prev ? { ...prev, active: updatedStatus } : null));
+
+      setEmployee((prev) =>
+        prev ? { ...prev, active: updatedStatus, terminationDate } : null
+      );
     } catch (error) {
       setErrorMessage('Failed to update employee status');
       console.error('Error toggling employee status:', error);
