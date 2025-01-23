@@ -1,38 +1,17 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
-import './app.css';
+import '../app.css';
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-interface ContactInfo {
-  email?: string;
-  phone?: string;
-  address?: string;
-}
-
-interface Employee {
-  id: string;
-  firstName: string;
-  lastName: string;
-  employeeId: string;
-  contactInfo?: ContactInfo;
-  hireDate: string;
-  active: boolean;
-  currentDepartmentId: string;
-  departmentName: string;
-  terminationDate?: string;
-}
-
-interface Department {
-  id: string;
-  name: string;
-}
-
-interface DepartmentHistory {
-  id: string;
-  createdAt: string;
-  departmentName: string;
-}
+import {
+  fetchDeparments,
+  fetchDepartmentHistory,
+  fetchEmployeeDetails,
+  updateEmployeeDepartment,
+  updateEmployeeStatus
+} from '../util/api';
+import { Department, DepartmentHistory, Employee } from '../util/types';
 
 function EmployeeDetails() {
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -47,49 +26,32 @@ function EmployeeDetails() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchEmployeeDetails = async () => {
+    const fetchData = async () => {
       try {
-        const employeeResponse = await fetch(`/api/employees/${id}`);
-        if (!employeeResponse.ok) throw new Error('Employee not found');
-        const employeeData = await employeeResponse.json();
+        const employeeData = await fetchEmployeeDetails(id);
         setEmployee(employeeData);
         setCurrentDepartment(employeeData.currentDepartmentId);
 
-        const departmentsResponse = await fetch('/api/departments');
-        const departmentsData: Department[] = await departmentsResponse.json();
+        const departmentsData: Department[] = await fetchDeparments();
         setDepartments(departmentsData);
 
-        const historyResponse = await fetch(`/api/departments-history/${id}`);
-        if (!historyResponse.ok)
-          throw new Error('Department history not found');
-        const historyData: DepartmentHistory[] = await historyResponse.json();
+        const historyData: DepartmentHistory[] =
+          await fetchDepartmentHistory(id);
         setDepartmentHistory(historyData);
-      } catch (error) {
-        setErrorMessage(error.message);
-        console.error('Error fetching employee details:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchEmployeeDetails();
+    fetchData();
   }, [id]);
 
   const handleUpdateDepartment = async () => {
     try {
-      await fetch(`/api/employees/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          currentDepartmentId: currentDepartment
-        })
-      });
+      await updateEmployeeDepartment(id, currentDepartment);
       alert('Department updated successfully');
     } catch (error) {
       setErrorMessage('Failed to update department');
-      console.error('Error updating department:', error);
     }
   };
 
@@ -101,20 +63,13 @@ function EmployeeDetails() {
         ? undefined
         : new Date().toISOString();
 
-      await fetch(`/api/employees/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ active: updatedStatus, terminationDate })
-      });
+      await updateEmployeeStatus(id, updatedStatus);
 
       setEmployee((prev) =>
         prev ? { ...prev, active: updatedStatus, terminationDate } : null
       );
     } catch (error) {
       setErrorMessage('Failed to update employee status');
-      console.error('Error toggling employee status:', error);
     }
   };
 

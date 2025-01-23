@@ -1,74 +1,23 @@
 /* eslint-disable react/require-default-props */
 /* eslint-disable react/button-has-type */
-import './app.css';
+import '../app.css';
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-interface ContactInfo {
-  email?: string;
-  phone?: string;
-}
-
-interface Employee {
-  id: string;
-  firstName: string;
-  lastName: string;
-  departmentName: string;
-  hireDate: string;
-  contactInfo: ContactInfo;
-  active: boolean;
-  terminationDate?: string;
-}
-
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-  message?: { type: 'success' | 'error'; text: string };
-  onCloseMessage?: () => void;
-}
-
-function Modal({
-  isOpen,
-  onClose,
-  children,
-  message,
-  onCloseMessage
-}: ModalProps) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="relative w-full max-w-md rounded bg-white p-6 shadow">
-        {message && (
-          <div
-            className={`mx-auto mb-4 flex w-11/12 items-center justify-center rounded px-3 py-2 text-xs font-medium ${
-              message.type === 'success'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-red-100 text-red-800'
-            }`}
-          >
-            <span>{message.text}</span>
-          </div>
-        )}
-        <button
-          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
-          onClick={() => {
-            onClose();
-            if (onCloseMessage) onCloseMessage();
-          }}
-        >
-          ✖
-        </button>
-        {children}
-      </div>
-    </div>
-  );
-}
+import Modal from '../components/modal';
+import {
+  addDepartment,
+  addEmployee,
+  fetchDeparments,
+  fetchEmployees,
+  updateEmployeeStatus
+} from '../util/api';
+import { Department, Employee } from '../util/types';
 
 function Home() {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
@@ -88,18 +37,18 @@ function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/employees');
-        const data: Employee[] = await response.json();
+        const data: Employee[] = await fetchEmployees();
         setEmployees(data);
-      } catch (error) {
-        console.error('Error fetching employees:', error);
+
+        const departmentsData: Department[] = await fetchDeparments();
+        setDepartments(departmentsData);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchEmployees();
+    fetchData();
   }, []);
 
   const handleStatusToggle = async (id: string) => {
@@ -111,13 +60,8 @@ function Home() {
         ? new Date().toISOString()
         : undefined;
 
-      await fetch(`/api/employees/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ active: updatedStatus })
-      });
+      await updateEmployeeStatus(id, updatedStatus);
+
       setEmployees((prev) =>
         prev.map((emp) =>
           emp.id === id
@@ -134,7 +78,6 @@ function Home() {
         text: `Employee ${updatedStatus ? 'activated' : 'deactivated'} successfully.`
       });
     } catch (error) {
-      console.error('Error toggling employee status:', error);
       setModalMessage({
         type: 'error',
         text: 'Failed to update employee status.'
@@ -160,35 +103,14 @@ function Home() {
       return;
     }
     try {
-      const response = await fetch('/api/employees', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          firstName: newEmployee.firstName,
-          lastName: newEmployee.lastName,
-          contactInfo: {
-            email: newEmployee.email,
-            phone: newEmployee.phone
-          },
-          hireDate: newEmployee.hireDate,
-          currentDepartmentId: newEmployee.departmentId
-        })
+      const addedEmployee = await addEmployee(newEmployee);
+      setEmployees((prev) => [...prev, addedEmployee]);
+      setIsEmployeeModalOpen(false);
+      setModalMessage({
+        type: 'success',
+        text: 'Employee added successfully.'
       });
-      if (response.ok) {
-        const addedEmployee = await response.json();
-        setEmployees((prev) => [...prev, addedEmployee]);
-        setIsEmployeeModalOpen(false);
-        setModalMessage({
-          type: 'success',
-          text: 'Employee added successfully.'
-        });
-      } else {
-        throw new Error('Failed to add employee');
-      }
     } catch (error) {
-      console.error('Error adding employee:', error);
       setModalMessage({ type: 'error', text: 'Failed to add employee.' });
     }
   };
@@ -203,24 +125,13 @@ function Home() {
       return;
     }
     try {
-      const response = await fetch('/api/departments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: newDepartment.name })
+      await addDepartment(newDepartment);
+      setIsDepartmentModalOpen(false);
+      setModalMessage({
+        type: 'success',
+        text: 'Department added successfully.'
       });
-      if (response.ok) {
-        setIsDepartmentModalOpen(false);
-        setModalMessage({
-          type: 'success',
-          text: 'Department added successfully.'
-        });
-      } else {
-        throw new Error('Failed to add department');
-      }
     } catch (error) {
-      console.error('Error adding department:', error);
       setModalMessage({ type: 'error', text: 'Failed to add department.' });
     }
   };
@@ -283,10 +194,10 @@ function Home() {
                   Hire Date: {new Date(employee.hireDate).toLocaleDateString()}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Email: {employee.contactInfo.email ?? 'N/A'}
+                  Email: {employee.contactInfo?.email ?? 'N/A'}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Phone: {employee.contactInfo.phone ?? 'N/A'}
+                  Phone: {employee.contactInfo?.phone ?? 'N/A'}
                 </p>
               </div>
               <div className="mt-4 flex justify-around">
@@ -366,9 +277,9 @@ function Home() {
             }
           >
             <option value="">Select Department</option>
-            {employees.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.departmentName}
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
               </option>
             ))}
           </select>

@@ -131,7 +131,7 @@ const updateEmployeeStatus = async (
   try {
     const terminationDate = !active
       ? new Date().toISOString().split('T')[0]
-      : null; // Solo establece la fecha si se desactiva
+      : null;
     await con.query(
       `UPDATE employees 
        SET active = ?, termination_date = ? 
