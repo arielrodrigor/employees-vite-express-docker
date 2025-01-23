@@ -8,5 +8,7 @@ export interface Employee {
   active: boolean;
   terminationDate?: Date;
   currentDepartmentId: number;
-  departmentName?: string; // Populated from join query
+  departmentName?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

@@ -11,11 +11,13 @@ interface ContactInfo {
 
 interface Employee {
   id: string;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   departmentName: string;
-  hire_date: string;
-  contact_info: ContactInfo;
+  hireDate: string;
+  contactInfo: ContactInfo;
+  active: boolean;
+  terminationDate?: string;
 }
 
 interface ModalProps {
@@ -73,14 +75,25 @@ function Home() {
     fetchEmployees();
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleStatusToggle = async (id: string) => {
     try {
+      const employee = employees.find((e) => e.id === id);
+      if (!employee) return;
+      const updatedStatus = !employee.active;
       await fetch(`/api/employees/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ active: updatedStatus })
       });
-      setEmployees((prev) => prev.filter((employee) => employee.id !== id));
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.id === id ? { ...emp, active: updatedStatus } : emp
+        )
+      );
     } catch (error) {
-      console.error('Error deleting employee:', error);
+      console.error('Error toggling employee status:', error);
     }
   };
 
@@ -97,15 +110,14 @@ function Home() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          employee_id: `EMP${Date.now()}`,
-          first_name: newEmployee.firstName,
-          last_name: newEmployee.lastName,
-          contact_info: {
+          firstName: newEmployee.firstName,
+          lastName: newEmployee.lastName,
+          contactInfo: {
             email: newEmployee.email,
             phone: newEmployee.phone
           },
-          hire_date: newEmployee.hireDate,
-          current_department_id: newEmployee.departmentId
+          hireDate: newEmployee.hireDate,
+          currentDepartmentId: newEmployee.departmentId
         })
       });
       if (response.ok) {
@@ -172,27 +184,37 @@ function Home() {
             >
               <div className="flex justify-center">
                 <img
-                  src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${employee.first_name}`}
+                  src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${employee.firstName.replaceAll(' ', '')}`}
                   alt="Avatar"
                   className="h-20 w-20 rounded-full border border-gray-300"
                 />
               </div>
               <div className="text-center">
                 <p className="text-lg font-semibold">
-                  {employee.first_name} {employee.last_name}
+                  {employee.firstName} {employee.lastName}
                 </p>
                 <p className="text-sm text-gray-600">
                   Department: {employee.departmentName}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Hire Date: {new Date(employee.hire_date).toLocaleDateString()}
+                  Hire Date: {new Date(employee.hireDate).toLocaleDateString()}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Email: {employee.contact_info.email ?? 'N/A'}
+                  Email: {employee.contactInfo.email ?? 'N/A'}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Phone: {employee.contact_info.phone ?? 'N/A'}
+                  Phone: {employee.contactInfo.phone ?? 'N/A'}
                 </p>
+                {employee.terminationDate && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-600">
+                      Termination Date:
+                    </span>
+                    <span className="text-sm font-semibold text-gray-700">
+                      {new Date(employee.terminationDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="mt-4 flex justify-around">
                 <button
@@ -205,9 +227,9 @@ function Home() {
                 <button
                   type="button"
                   className="w-24 rounded bg-[#bf6363] py-2 text-sm text-white hover:bg-red-700"
-                  onClick={() => handleDelete(employee.id)}
+                  onClick={() => handleStatusToggle(employee.id)}
                 >
-                  Delete
+                  {employee.active ? 'Deactivate' : 'Activate'}
                 </button>
               </div>
             </div>

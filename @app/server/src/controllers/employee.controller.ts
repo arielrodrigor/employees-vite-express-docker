@@ -76,18 +76,29 @@ export default {
     }
   },
 
-  deleteEmployee: async (req: Request, res: Response) => {
+  updateEmployeeStatus: async (req: Request, res: Response) => {
     try {
       const employeeId = Number(req.params.id);
+      const { active } = req.body;
+
       if (Number.isNaN(employeeId)) {
         return res.status(400).json({ message: 'Invalid employee ID' });
       }
 
-      await employeeService.deleteEmployee(employeeId);
-      res.status(204).send();
+      if (typeof active !== 'boolean') {
+        return res
+          .status(400)
+          .json({ message: 'Invalid "active" value. It must be a boolean.' });
+      }
+
+      await employeeService.updateEmployeeStatus(employeeId, active);
+      res.status(200).json({
+        message: `Employee status updated successfully`,
+        active
+      });
     } catch (error: any) {
       console.error(
-        `Error deleting employee with ID ${req.params.id}:`,
+        `Error updating employee status with ID ${req.params.id}:`,
         error.message
       );
 

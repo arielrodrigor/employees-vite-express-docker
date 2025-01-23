@@ -1,6 +1,15 @@
 import { DepartmentHistory } from '../models/department-history.model';
 import { con } from '../providers/mysql/connect';
 
+const mapDbToModel = (dbRow: any): DepartmentHistory => ({
+  id: dbRow.id,
+  employeeId: dbRow.employee_id,
+  departmentId: dbRow.department_id,
+  createdAt: new Date(dbRow.created_at),
+  updatedAt: new Date(dbRow.updated_at),
+  departmentName: dbRow.departmentName
+});
+
 const getHistoryByEmployeeId = async (
   employeeId: number
 ): Promise<DepartmentHistory[]> => {
@@ -9,7 +18,7 @@ const getHistoryByEmployeeId = async (
       'SELECT dh.*, d.name AS departmentName FROM departments_history dh LEFT JOIN departments d ON dh.department_id = d.id WHERE dh.employee_id = ?;',
       [employeeId]
     );
-    return rows as DepartmentHistory[];
+    return (rows as any[]).map(mapDbToModel);
   } catch (error) {
     console.error(
       `Error fetching department history for employee ${employeeId}:`,

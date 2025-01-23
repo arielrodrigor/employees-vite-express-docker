@@ -20,6 +20,7 @@ interface Employee {
   active: boolean;
   currentDepartmentId: string;
   departmentName: string;
+  terminationDate?: string;
 }
 
 interface Department {
@@ -45,30 +46,14 @@ function EmployeeDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const mapEmployeeData = (data: any): Employee => ({
-    id: data.id,
-    firstName: data.first_name,
-    lastName: data.last_name,
-    employeeId: data.employee_id,
-    contactInfo: {
-      email: data.contact_info?.email,
-      phone: data.contact_info?.phone,
-      address: data.contact_info?.address
-    },
-    hireDate: data.hire_date,
-    active: Boolean(data.active),
-    currentDepartmentId: data.current_department_id,
-    departmentName: data.departmentName
-  });
-
   useEffect(() => {
     const fetchEmployeeDetails = async () => {
       try {
         const employeeResponse = await fetch(`/api/employees/${id}`);
         if (!employeeResponse.ok) throw new Error('Employee not found');
         const employeeData = await employeeResponse.json();
-        setEmployee(mapEmployeeData(employeeData));
-        setCurrentDepartment(employeeData.current_department_id);
+        setEmployee(employeeData);
+        setCurrentDepartment(employeeData.currentDepartmentId);
 
         const departmentsResponse = await fetch('/api/departments');
         const departmentsData: Department[] = await departmentsResponse.json();
@@ -113,7 +98,7 @@ function EmployeeDetails() {
       if (!employee) return;
       const updatedStatus = !employee.active;
       await fetch(`/api/employees/${id}`, {
-        method: 'PUT',
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -156,7 +141,7 @@ function EmployeeDetails() {
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="flex items-center gap-6">
           <img
-            src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${employee.firstName}`}
+            src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${employee.firstName.replaceAll(' ', '')}`}
             alt="Avatar"
             className="h-32 w-32 rounded-full border border-gray-300"
           />
@@ -176,9 +161,16 @@ function EmployeeDetails() {
             <p className="text-sm text-gray-600">
               Phone: {employee.contactInfo?.phone ?? 'N/A'}
             </p>
-            <p className="text-sm text-gray-600">
-              Address: {employee.contactInfo?.address ?? 'N/A'}
-            </p>
+            {employee.terminationDate && (
+              <div className="mt-4 flex items-center gap-2">
+                <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-600">
+                  Termination Date:
+                </span>
+                <span className="text-sm font-semibold text-gray-700">
+                  {new Date(employee.terminationDate).toLocaleDateString()}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
